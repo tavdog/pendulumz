@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PENDULUMZ</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3CradialGradient id='g' cx='18' cy='26' r='8' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0' stop-color='%23a08cff' stop-opacity='.6'/%3E%3Cstop offset='1' stop-color='%23a08cff' stop-opacity='0'/%3E%3C/radialGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='6' fill='%23080814'/%3E%3Ccircle cx='18' cy='26' r='7' fill='url(%23g)'/%3E%3Ccircle cx='16' cy='5' r='2' fill='%23888'/%3E%3Cline x1='16' y1='5' x2='11' y2='16' stroke='%23999' stroke-width='1.2' stroke-linecap='round'/%3E%3Ccircle cx='11' cy='16' r='2.5' fill='%23bbb'/%3E%3Cline x1='11' y1='16' x2='18' y2='26' stroke='%23888' stroke-width='1' stroke-linecap='round'/%3E%3Ccircle cx='18' cy='26' r='2.2' fill='%23b09cff'/%3E%3Ccircle cx='18' cy='26' r='1' fill='%23e0d8ff'/%3E%3C/svg%3E">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background: #04040b;
+            cursor: crosshair;
+        }
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 3px,
+                rgba(0,0,0,0.025) 3px,
+                rgba(0,0,0,0.025) 6px
+            );
+            pointer-events: none;
+            z-index: 10;
+        }
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        #bloom {
+            filter: blur(14px) brightness(1.3);
+            opacity: 0.28;
+            mix-blend-mode: screen;
+            pointer-events: none;
+            z-index: 2;
+        }
+        #main { z-index: 1; }
+
+        #ctrl {
+            position: fixed;
+            bottom: 24px;
+            right: 28px;
+            z-index: 20;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            opacity: 0.4;
+            transition: opacity 0.3s;
+            padding: 16px 18px;
+            background: rgba(10,10,20,0.35);
+            border-radius: 10px;
+        }
+        #ctrl:hover { opacity: 0.95; }
+        .ctrl-row {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        #ctrl label {
+            font: 700 13px/1 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: rgba(240,238,230,0.95);
+            width: 52px;
+            text-align: right;
+        }
+        #ctrl .val {
+            font: 600 13px/1 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+            color: rgba(240,238,230,0.7);
+            width: 44px;
+        }
+        #ctrl input[type=range] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 140px;
+            height: 6px;
+            background: rgba(220,218,210,0.3);
+            border-radius: 3px;
+            outline: none;
+            cursor: pointer;
+        }
+        #ctrl input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: rgba(245,242,235,0.95);
+            box-shadow: 0 0 6px rgba(255,255,255,0.3);
+            cursor: pointer;
+        }
+        #ctrl input[type=range]::-moz-range-thumb {
+            width: 22px;
+            height: 22px;
+            border: none;
+            border-radius: 50%;
+            background: rgba(245,242,235,0.95);
+            box-shadow: 0 0 6px rgba(255,255,255,0.3);
+            cursor: pointer;
+        }
+        #ctrl .btn-row {
+            display: flex;
+            gap: 8px;
+            align-self: flex-end;
+        }
+        #ctrl .btn-row button {
+            font: 700 11px/1 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: rgba(240,238,230,0.9);
+            background: rgba(220,218,210,0.12);
+            border: 1px solid rgba(220,218,210,0.2);
+            border-radius: 6px;
+            padding: 6px 14px;
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.2s;
+        }
+        .chk-row {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .chk-row label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font: 600 12px/1 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: rgba(240,238,230,0.9);
+            cursor: pointer;
+        }
+        .chk-row input[type=checkbox] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border: 1.5px solid rgba(220,218,210,0.35);
+            border-radius: 3px;
+            background: rgba(220,218,210,0.08);
+            cursor: pointer;
+            position: relative;
+        }
+        .chk-row input[type=checkbox]:checked {
+            background: rgba(220,218,210,0.25);
+            border-color: rgba(220,218,210,0.6);
+        }
+        .chk-row input[type=checkbox]:checked::after {
+            content: '\2713';
+            position: absolute;
+            top: -1px;
+            left: 2px;
+            font-size: 12px;
+            color: rgba(240,238,230,0.9);
+        }
+        #ctrl .btn-row button:hover {
+            background: rgba(220,218,210,0.25);
+            border-color: rgba(220,218,210,0.4);
+        }
+        #credit {
+            position: fixed;
+            bottom: 20px;
+            left: 28px;
+            z-index: 20;
+        }
+        #credit a {
+            font: 500 11px/1 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+            letter-spacing: 1px;
+            color: rgba(180,178,170,0.35);
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+        #credit a:hover {
+            color: rgba(220,218,210,0.8);
+        }
+        .spd-btn {
+            width: 26px;
+            height: 26px;
+            font-size: 14px;
+            line-height: 1;
+            color: rgba(240,238,230,0.85);
+            background: rgba(220,218,210,0.12);
+            border: 1px solid rgba(220,218,210,0.2);
+            border-radius: 5px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+            padding: 0;
+        }
+        .spd-btn:hover {
+            background: rgba(220,218,210,0.3);
+        }
+        #ctrl input[type=number] {
+            width: 60px;
+            height: 26px;
+            font: 600 13px/1 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+            color: rgba(240,238,230,0.95);
+            background: rgba(220,218,210,0.1);
+            border: 1px solid rgba(220,218,210,0.25);
+            border-radius: 5px;
+            text-align: center;
+            outline: none;
+            cursor: pointer;
+        }
+        #ctrl input[type=number]:focus {
+            border-color: rgba(220,218,210,0.5);
+        }
+        #logo {
+            position: fixed;
+            top: 24px;
+            left: 28px;
+            z-index: 20;
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        #logo .icon {
+            width: 36px;
+            height: 36px;
+            position: relative;
+        }
+        #logo .icon svg {
+            width: 100%;
+            height: 100%;
+            filter: drop-shadow(0 0 6px rgba(180,175,255,0.3));
+        }
+        #logo .text {
+            font: 900 22px/1 'Orbitron', sans-serif;
+            letter-spacing: 5px;
+            text-transform: uppercase;
+            background: linear-gradient(
+                135deg,
+                rgba(200,198,220,0.7) 0%,
+                rgba(255,255,255,0.9) 40%,
+                rgba(180,175,255,0.6) 100%
+            );
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 0 10px rgba(180,175,255,0.2));
+        }
+        #logo .text span {
+            background: linear-gradient(
+                135deg,
+                rgba(140,160,255,0.8) 0%,
+                rgba(200,140,255,0.9) 100%
+            );
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+    </style>
+</head>
+<body>
+    <div id="logo">
+        <div class="icon">
+            <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="20" cy="8" r="3" fill="rgba(200,198,210,0.5)"/>
+                <line x1="20" y1="8" x2="12" y2="22" stroke="rgba(200,198,210,0.45)" stroke-width="1.5" stroke-linecap="round"/>
+                <circle cx="12" cy="22" r="3.5" fill="rgba(210,208,220,0.7)"/>
+                <line x1="12" y1="22" x2="22" y2="35" stroke="rgba(200,198,210,0.35)" stroke-width="1.2" stroke-linecap="round"/>
+                <circle cx="22" cy="35" r="2.8" fill="rgba(160,140,255,0.7)"/>
+                <circle cx="22" cy="35" r="6" fill="rgba(160,140,255,0.08)"/>
+            </svg>
+        </div>
+        <div class="text">Pendulum<span>z</span></div>
+    </div>
+    <div id="credit"><a href="https://clodhost.com/r/7fd23a830d51" target="_blank" rel="noopener">created with clodhost</a></div>
+    <canvas id="main"></canvas>
+    <canvas id="bloom"></canvas>
+    <div id="ctrl">
+        <div class="ctrl-row"><label>spd</label><button class="spd-btn" id="spdDown">&#9662;</button><input type="number" id="speed" min="1" max="80" value="5" step="1"><button class="spd-btn" id="spdUp">&#9652;</button></div>
+        <div class="ctrl-row"><label>legs</label><input type="range" id="sRatio" min="10" max="90" value="50"><span class="val" id="vRatio">1:1</span></div>
+        <div class="ctrl-row"><label>m1</label><input type="range" id="sM1" min="10" max="300" value="100"><span class="val" id="vM1">1.0</span></div>
+        <div class="ctrl-row"><label>m2</label><input type="range" id="sM2" min="10" max="300" value="100"><span class="val" id="vM2">1.0</span></div>
+        <div class="ctrl-row"><label>trail</label><input type="range" id="sTrail" min="0" max="100" value="30"><span class="val" id="vTrail">5s</span></div>
+        <div class="ctrl-row"><label>hue</label><input type="range" id="sHue" min="5" max="200" value="42"><span class="val" id="vHue">4.2</span></div>
+        <div class="ctrl-row"><label>drag</label><input type="range" id="sDrag" min="0" max="100" value="0" step="1"><span class="val" id="vDrag">0</span></div>
+        <div class="ctrl-row"><label>size</label><input type="range" id="sRes" min="0" max="5" value="3"><span class="val" id="vRes">64x32</span></div>
+        <div class="ctrl-row"><label>evolve</label><input type="range" id="sEvolve" min="0" max="60" value="0"><span class="val" id="vEvolve">off</span></div>
+        <div class="chk-row"><label><input type="checkbox" id="chkLegs" checked>legs</label><label><input type="checkbox" id="chkBobs" checked>bobs</label><label><input type="checkbox" id="chkSound">sound</label></div>
+        <div class="btn-row"><button id="btnRand">random</button><button id="btnShare">share</button></div>
+    </div>
+    <script>
+    (() => {
+        'use strict';
+
+        let COLS = 64, ROWS = 32;
+        const RES_STEPS = [8, 16, 32, 64, 128];
+
+        /* ── Physics ── */
+        const G  = 9.81;
+        let m1 = 1.0, m2 = 1.0;
+        let l1 = 1.0, l2 = 1.0;
+        let maxR = l1 + l2;
+        const PHYS_DT = 0.002;
+        let fade = 0.9945;
+        let hueSpeed = 4.2;
+        let drag = 0;
+
+        const TOTAL_L = 2.0;
+        const elSpeed = document.getElementById('speed');
+        const elRatio = document.getElementById('sRatio');
+        const elM1    = document.getElementById('sM1');
+        const elM2    = document.getElementById('sM2');
+        const elTrail  = document.getElementById('sTrail');
+        const elHue    = document.getElementById('sHue');
+        const elDrag   = document.getElementById('sDrag');
+        const elRes    = document.getElementById('sRes');
+        const elEvolve = document.getElementById('sEvolve');
+        const vRatio  = document.getElementById('vRatio');
+        const vM1     = document.getElementById('vM1');
+        const vM2     = document.getElementById('vM2');
+        const vTrail  = document.getElementById('vTrail');
+        const vHue    = document.getElementById('vHue');
+        const vDrag   = document.getElementById('vDrag');
+        const vRes    = document.getElementById('vRes');
+        const vEvolve = document.getElementById('vEvolve');
+        let steps = 20;
+
+        /* ── Web Audio — two-note pentatonic harmony from bob heights ── */
+        let audioCtx = null;
+        let osc1 = null, osc2 = null;
+        let gain1 = null, gain2 = null;
+        let masterGain = null;
+        let audioStarted = false;
+
+        /* Pentatonic scale semitone offsets: C D E G A, across multiple octaves */
+        const PENTA = [0, 2, 4, 7, 9]; /* one octave */
+        const BASE_NOTE = 48; /* C3 MIDI */
+        const NUM_OCTAVES = 3;
+        const SCALE = [];
+        for (let oct = 0; oct < NUM_OCTAVES; oct++) {
+            for (let i = 0; i < PENTA.length; i++) {
+                SCALE.push(BASE_NOTE + oct * 12 + PENTA[i]);
+            }
+        }
+        SCALE.push(BASE_NOTE + NUM_OCTAVES * 12); /* top C */
+
+        function midiToFreq(midi) { return 440 * Math.pow(2, (midi - 69) / 12); }
+
+        function heightToNote(y, maxY) {
+            /* y ranges from -maxY (top) to +maxY (bottom) */
+            /* Normalize to 0 (high note) → 1 (low note) */
+            const norm = (y + maxY) / (2 * maxY);
+            const clamped = Math.max(0, Math.min(1, norm));
+            /* Invert: high position → high note index */
+            const idx = Math.round((1 - clamped) * (SCALE.length - 1));
+            return midiToFreq(SCALE[idx]);
+        }
+
+        function initAudio() {
+            if (audioStarted) return;
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            masterGain = audioCtx.createGain();
+            masterGain.gain.value = 0.15;
+            masterGain.connect(audioCtx.destination);
+
+            /* Top bob — triangle wave */
+            gain1 = audioCtx.createGain();
+            gain1.gain.value = 0.4;
+            gain1.connect(masterGain);
+            osc1 = audioCtx.createOscillator();
+            osc1.type = 'triangle';
+            osc1.frequency.value = 220;
+            osc1.connect(gain1);
+            osc1.start();
+
+            /* Bottom bob — sine wave */
+            gain2 = audioCtx.createGain();
+            gain2.gain.value = 0.5;
+            gain2.connect(masterGain);
+            osc2 = audioCtx.createOscillator();
+            osc2.type = 'sine';
+            osc2.frequency.value = 220;
+            osc2.connect(gain2);
+            osc2.start();
+
+            audioStarted = true;
+        }
+
+        function stopAudio() {
+            if (!audioStarted) return;
+            osc1.stop(); osc2.stop();
+            audioCtx.close();
+            audioStarted = false;
+            audioCtx = null;
+            osc1 = osc2 = gain1 = gain2 = masterGain = null;
+        }
+
+        document.getElementById('chkSound').addEventListener('change', function() {
+            if (this.checked) initAudio();
+            else stopAudio();
+        });
+
+        /* ── Load URL params ── */
+        const params = new URLSearchParams(window.location.search);
+        const paramMap = [
+            ['spd', elSpeed], ['legs', elRatio], ['m1', elM1], ['m2', elM2],
+            ['trail', elTrail], ['hue', elHue], ['drag', elDrag],
+            ['res', elRes], ['evolve', elEvolve]
+        ];
+        paramMap.forEach(([key, el]) => {
+            const v = params.get(key);
+            if (v !== null) el.value = v;
+        });
+        const paramT1 = params.get('t1');
+        const paramT2 = params.get('t2');
+
+        /* ── State: [θ₁, ω₁, θ₂, ω₂] ── */
+        let state = [
+            paramT1 !== null ? parseFloat(paramT1) : Math.PI,
+            0,
+            paramT2 !== null ? parseFloat(paramT2) : Math.PI * (181/180),
+            0
+        ];
+        let simTime = 0;
+        let hue = 0;
+        let paused = false;
+
+        /* ── Grid: each cell stores trail hue + alpha ── */
+        let grid = [];
+        let lineMode = false;
+        const MAX_TRAIL_PTS = 12000;
+        let trail = []; /* continuous mode: [{x, y, h, a}] in physics coords */
+
+        function rebuildGrid() {
+            grid = Array.from({ length: ROWS }, () =>
+                Array.from({ length: COLS }, () => ({ h: 0, a: 0 }))
+            );
+        }
+        rebuildGrid();
+
+        /* ── Double-pendulum derivatives (Lagrangian mechanics) ── */
+        function derivs(s) {
+            const t1 = s[0], w1 = s[1], t2 = s[2], w2 = s[3];
+            const d    = t1 - t2;
+            const sinD = Math.sin(d);
+            const cosD = Math.cos(d);
+            const den  = 2 * m1 + m2 - m2 * Math.cos(2 * d);
+
+            const a1 = (
+                -G * (2 * m1 + m2) * Math.sin(t1)
+                - m2 * G * Math.sin(t1 - 2 * t2)
+                - 2 * sinD * m2 * (w2 * w2 * l2 + w1 * w1 * l1 * cosD)
+            ) / (l1 * den);
+
+            const a2 = (
+                2 * sinD * (
+                    w1 * w1 * l1 * (m1 + m2)
+                    + G * (m1 + m2) * Math.cos(t1)
+                    + w2 * w2 * l2 * m2 * cosD
+                )
+            ) / (l2 * den);
+
+            return [w1, a1, w2, a2];
+        }
+
+        /* ── RK4 integrator ── */
+        function rk4(s, dt) {
+            const k1 = derivs(s);
+            const s2 = [s[0]+k1[0]*dt*0.5, s[1]+k1[1]*dt*0.5, s[2]+k1[2]*dt*0.5, s[3]+k1[3]*dt*0.5];
+            const k2 = derivs(s2);
+            const s3 = [s[0]+k2[0]*dt*0.5, s[1]+k2[1]*dt*0.5, s[2]+k2[2]*dt*0.5, s[3]+k2[3]*dt*0.5];
+            const k3 = derivs(s3);
+            const s4 = [s[0]+k3[0]*dt, s[1]+k3[1]*dt, s[2]+k3[2]*dt, s[3]+k3[3]*dt];
+            const k4 = derivs(s4);
+            return [
+                s[0] + (k1[0] + 2*k2[0] + 2*k3[0] + k4[0]) * dt / 6,
+                s[1] + (k1[1] + 2*k2[1] + 2*k3[1] + k4[1]) * dt / 6,
+                s[2] + (k1[2] + 2*k2[2] + 2*k3[2] + k4[2]) * dt / 6,
+                s[3] + (k1[3] + 2*k2[3] + 2*k3[3] + k4[3]) * dt / 6
+            ];
+        }
+
+        /* ── Joint (first bob) position ── */
+        function jointXY(s) {
+            return [l1 * Math.sin(s[0]), l1 * Math.cos(s[0])];
+        }
+
+        /* ── Tip of second pendulum ── */
+        function tipXY(s) {
+            return [
+                l1 * Math.sin(s[0]) + l2 * Math.sin(s[2]),
+                l1 * Math.cos(s[0]) + l2 * Math.cos(s[2])
+            ];
+        }
+
+        /* ── Map continuous position → grid cell (uniform scale) ── */
+        function toGrid(x, y) {
+            const [sx, sy] = toScreen(x, y);
+            const c = Math.round(sx / cellW - 0.5);
+            const r = Math.round(sy / cellH - 0.5);
+            return [
+                c < 0 ? 0 : c >= COLS ? COLS - 1 : c,
+                r < 0 ? 0 : r >= ROWS ? ROWS - 1 : r
+            ];
+        }
+
+        /* ── Bresenham line for gap-free trails ── */
+        function line(c0, r0, c1, r1, h) {
+            let dx = Math.abs(c1 - c0), dy = -Math.abs(r1 - r0);
+            let sx = c0 < c1 ? 1 : -1,  sy = r0 < r1 ? 1 : -1;
+            let err = dx + dy;
+            for (;;) {
+                if (c0 >= 0 && c0 < COLS && r0 >= 0 && r0 < ROWS) {
+                    const cell = grid[r0][c0];
+                    cell.h = h;
+                    cell.a = 1;
+                }
+                if (c0 === c1 && r0 === r1) break;
+                const e2 = 2 * err;
+                if (e2 >= dy) { err += dy; c0 += sx; }
+                if (e2 <= dx) { err += dx; r0 += sy; }
+            }
+        }
+
+        /* ── Canvas setup ── */
+        const mainC  = document.getElementById('main');
+        const bloomC = document.getElementById('bloom');
+        const ctx  = mainC.getContext('2d');
+        const bctx = bloomC.getContext('2d');
+
+        let cellW, cellH, dotR, dpr;
+        let curC = 32, curR = 24;
+        let jointC = 32, jointR = 16;
+
+        function resize() {
+            dpr = window.devicePixelRatio || 1;
+            const w = window.innerWidth, h = window.innerHeight;
+            mainC.width  = bloomC.width  = w * dpr;
+            mainC.height = bloomC.height = h * dpr;
+            cellW = w / COLS;
+            cellH = h / ROWS;
+            dotR  = Math.min(cellW, cellH) * 0.36;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        /* ── Physics + grid update ── */
+        function update() {
+            steps = parseInt(elSpeed.value, 10);
+            const ratio = parseInt(elRatio.value, 10) / 100;
+            l1  = TOTAL_L * ratio;
+            l2  = TOTAL_L * (1 - ratio);
+            m1  = parseInt(elM1.value, 10) / 100;
+            m2  = parseInt(elM2.value, 10) / 100;
+            const trailVal = parseInt(elTrail.value, 10);
+            if (trailVal <= 0) { fade = 0; }
+            else if (trailVal >= 100) { fade = 1; }
+            else {
+                /* Map 1–99 linearly to 1–20 seconds duration */
+                const dur = 1 + (trailVal - 1) * (19 / 98);
+                fade = Math.pow(0.01, 1 / (dur * 60));
+            }
+            hueSpeed = parseInt(elHue.value, 10) / 10;
+            drag = parseInt(elDrag.value, 10) / 10000;
+            maxR = TOTAL_L;
+
+            /* Resolution change */
+            const resIdx = parseInt(elRes.value, 10);
+            const wasLine = lineMode;
+            lineMode = (resIdx >= RES_STEPS.length);
+            if (!lineMode) {
+                const newSize = RES_STEPS[resIdx];
+                const newRows = Math.round(newSize / 2);
+                if (newSize !== COLS || newRows !== ROWS || wasLine) {
+                    COLS = newSize;
+                    ROWS = newRows;
+                    rebuildGrid();
+                    const w = window.innerWidth;
+                    const h = window.innerHeight;
+                    cellW = w / COLS;
+                    cellH = h / ROWS;
+                    dotR  = Math.min(cellW, cellH) * 0.36;
+                }
+            } else if (!wasLine) {
+                trail = [];
+            }
+
+            /* Trail duration for display */
+            const trailSec = fade <= 0 ? 0 : fade >= 1 ? Infinity : (Math.log(0.01) / Math.log(fade)) / 60;
+
+            vRatio.textContent = l1.toFixed(1) + ':' + l2.toFixed(1);
+            vM1.textContent    = m1.toFixed(1);
+            vM2.textContent    = m2.toFixed(1);
+            vTrail.textContent = fade <= 0 ? 'off' : fade >= 1 ? '\u221e' : trailSec.toFixed(0) + 's';
+            vHue.textContent   = hueSpeed.toFixed(1);
+            vDrag.textContent  = drag > 0 ? (drag * 100).toFixed(2) + '%' : '0';
+            vRes.textContent   = lineMode ? 'line' : COLS + 'x' + ROWS;
+
+            let pc = curC, pr = curR;
+
+            /* Damping factor per physics step: (1 - drag)^dt scales naturally with timestep */
+            const damp = drag > 0 ? Math.pow(1 - drag, PHYS_DT * 50) : 1;
+
+            for (let i = 0; i < steps; i++) {
+                state = rk4(state, PHYS_DT);
+                if (damp < 1) { state[1] *= damp; state[3] *= damp; }
+                simTime += PHYS_DT;
+                hue = (hue + hueSpeed * PHYS_DT) % 360;
+
+                const [x, y] = tipXY(state);
+
+                if (lineMode) {
+                    trail.push({ x, y, h: hue, a: 1 });
+                    if (trail.length > MAX_TRAIL_PTS) trail.splice(0, trail.length - MAX_TRAIL_PTS);
+                } else {
+                    const [c, r] = toGrid(x, y);
+                    line(pc, pr, c, r, hue);
+                    pc = c;
+                    pr = r;
+                }
+
+                const [jx, jy] = jointXY(state);
+                [jointC, jointR] = toGrid(jx, jy);
+            }
+            if (!lineMode) {
+                curC = pc;
+                curR = pr;
+            }
+
+            /* ── Audio: map bottom bob height to pitch ── */
+            if (audioStarted && audioCtx) {
+                const maxY = l1 + l2;
+                const [, jointY] = jointXY(state);
+                const [, tipY] = tipXY(state);
+
+                const f1 = heightToNote(jointY, maxY);
+                const f2 = heightToNote(tipY, maxY);
+
+                osc1.frequency.setTargetAtTime(f1, audioCtx.currentTime, 0.03);
+                osc2.frequency.setTargetAtTime(f2, audioCtx.currentTime, 0.03);
+            }
+
+            if (lineMode) {
+                /* Fade continuous trail */
+                for (let i = trail.length - 1; i >= 0; i--) {
+                    trail[i].a *= fade;
+                    if (trail[i].a < 0.005) { trail.splice(i, 1); }
+                }
+            } else {
+                for (let r = 0; r < ROWS; r++) {
+                    const row = grid[r];
+                    for (let c = 0; c < COLS; c++) {
+                        const cell = row[c];
+                        if (cell.a > 0) {
+                            cell.a *= fade;
+                            if (cell.a < 0.008) cell.a = 0;
+                        }
+                    }
+                }
+            }
+        }
+
+        /* ── Map physics coords → screen pixels (uniform scale, true lengths) ── */
+        function toScreen(x, y) {
+            const w = window.innerWidth, h = window.innerHeight;
+            const scale = Math.min(w, h) / (2 * maxR);
+            return [
+                w * 0.5 + x * scale,
+                h * 0.5 + y * scale
+            ];
+        }
+
+        /* ── Render ── */
+        const TAU = Math.PI * 2;
+
+        function render() {
+            const w = window.innerWidth, h = window.innerHeight;
+
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            bctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+            /* Background */
+            ctx.fillStyle = '#04040b';
+            ctx.fillRect(0, 0, w, h);
+
+            /* Vignette */
+            const vig = ctx.createRadialGradient(w * 0.5, h * 0.5, h * 0.25, w * 0.5, h * 0.5, Math.max(w, h) * 0.72);
+            vig.addColorStop(0, 'rgba(4,4,11,0)');
+            vig.addColorStop(1, 'rgba(0,0,2,0.55)');
+            ctx.fillStyle = vig;
+            ctx.fillRect(0, 0, w, h);
+
+            /* Clear bloom */
+            bctx.clearRect(0, 0, w, h);
+
+            /* ── Pendulum legs (continuous physics positions) ── */
+            const [px, py] = toScreen(0, 0);
+            const [jx, jy] = jointXY(state);
+            const [jsx, jsy] = toScreen(jx, jy);
+            const [tipx, tipy] = tipXY(state);
+            const [tsx, tsy] = toScreen(tipx, tipy);
+
+            const armR = lineMode ? 6 : dotR;
+            const showLegs = document.getElementById('chkLegs').checked;
+            const showBobs = document.getElementById('chkBobs').checked;
+
+            if (showLegs) {
+                ctx.lineCap = 'round';
+
+                /* Upper leg: pivot → joint */
+                ctx.strokeStyle = 'rgba(180,175,165,0.28)';
+                ctx.lineWidth = armR * 0.22;
+                ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(jsx, jsy); ctx.stroke();
+
+                /* Lower leg: joint → tip */
+                ctx.strokeStyle = 'rgba(180,175,165,0.22)';
+                ctx.lineWidth = armR * 0.18;
+                ctx.beginPath(); ctx.moveTo(jsx, jsy); ctx.lineTo(tsx, tsy); ctx.stroke();
+
+                /* Bloom legs */
+                bctx.lineCap = 'round';
+                bctx.strokeStyle = 'rgba(180,175,165,0.15)';
+                bctx.lineWidth = armR * 0.35;
+                bctx.beginPath(); bctx.moveTo(px, py); bctx.lineTo(jsx, jsy); bctx.stroke();
+                bctx.beginPath(); bctx.moveTo(jsx, jsy); bctx.lineTo(tsx, tsy); bctx.stroke();
+
+                /* Pivot dot — small solid mark */
+                ctx.fillStyle = 'rgba(160,155,145,0.5)';
+                ctx.beginPath(); ctx.arc(px, py, armR * 0.3, 0, TAU); ctx.fill();
+                ctx.fillStyle = 'rgba(200,195,185,0.8)';
+                ctx.beginPath(); ctx.arc(px, py, armR * 0.14, 0, TAU); ctx.fill();
+            }
+
+            if (lineMode) {
+                /* ── Continuous trail ── */
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                bctx.lineCap = 'round';
+                bctx.lineJoin = 'round';
+
+                for (let i = 1; i < trail.length; i++) {
+                    const p0 = trail[i - 1], p1 = trail[i];
+                    if (p1.a < 0.005) continue;
+                    const [x0, y0] = toScreen(p0.x, p0.y);
+                    const [x1, y1] = toScreen(p1.x, p1.y);
+                    const a = p1.a;
+                    const lw = 1.5 + a * 2.5;
+
+                    ctx.strokeStyle = `hsla(${p1.h},92%,${54 + a * 16}%,${(a * 0.9).toFixed(3)})`;
+                    ctx.lineWidth = lw;
+                    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+
+                    bctx.strokeStyle = `hsla(${p1.h},95%,62%,${(a * 0.7).toFixed(3)})`;
+                    bctx.lineWidth = lw + 2;
+                    bctx.beginPath(); bctx.moveTo(x0, y0); bctx.lineTo(x1, y1); bctx.stroke();
+                }
+
+                /* Tip bob drawn below with mass scaling */
+            } else {
+                /* ── Dot grid ── */
+                for (let r = 0; r < ROWS; r++) {
+                    const row = grid[r];
+                    for (let c = 0; c < COLS; c++) {
+                        const cx = c * cellW + cellW * 0.5;
+                        const cy = r * cellH + cellH * 0.5;
+                        const cell = row[c];
+
+                        if (cell.a > 0.008) {
+                            const a  = cell.a;
+                            const ch = cell.h;
+                            const isCur = (c === curC && r === curR);
+
+                            /* Glow halo */
+                            const gr = dotR * (1.1 + a * 0.9);
+                            ctx.fillStyle  = `hsla(${ch},90%,52%,${(a * 0.22).toFixed(3)})`;
+                            ctx.beginPath(); ctx.arc(cx, cy, gr, 0, TAU); ctx.fill();
+
+                            /* Bloom halo */
+                            bctx.fillStyle = `hsla(${ch},95%,58%,${(a * 0.65).toFixed(3)})`;
+                            bctx.beginPath(); bctx.arc(cx, cy, gr * 1.1, 0, TAU); bctx.fill();
+
+                            /* Core dot */
+                            const coreR = dotR * (0.45 + a * 0.55);
+                            const light = 54 + a * 16;
+                            ctx.fillStyle  = `hsla(${ch},93%,${light.toFixed(0)}%,${(a * 0.88).toFixed(3)})`;
+                            ctx.beginPath(); ctx.arc(cx, cy, coreR, 0, TAU); ctx.fill();
+
+                            /* Bloom core */
+                            bctx.fillStyle = `hsla(${ch},95%,64%,${(a * 0.8).toFixed(3)})`;
+                            bctx.beginPath(); bctx.arc(cx, cy, coreR, 0, TAU); bctx.fill();
+
+                            /* Live position extras */
+                            if (isCur) {
+                                ctx.fillStyle = `hsla(${ch},50%,92%,0.85)`;
+                                ctx.beginPath(); ctx.arc(cx, cy, dotR * 0.28, 0, TAU); ctx.fill();
+
+                                ctx.fillStyle = `hsla(${ch},80%,58%,0.1)`;
+                                ctx.beginPath(); ctx.arc(cx, cy, dotR * 3.2, 0, TAU); ctx.fill();
+
+                                bctx.fillStyle = `hsla(${ch},75%,72%,0.55)`;
+                                bctx.beginPath(); bctx.arc(cx, cy, dotR * 2.6, 0, TAU); bctx.fill();
+                            }
+                        } else {
+                            /* Inactive dot — faint pulse */
+                            const pulse = 0.045 + 0.018 * Math.sin(simTime * 0.35 + c * 0.31 + r * 0.47);
+                            ctx.fillStyle = `rgba(100,108,160,${pulse.toFixed(3)})`;
+                            ctx.beginPath(); ctx.arc(cx, cy, dotR * 0.18, 0, TAU); ctx.fill();
+                        }
+                    }
+                }
+            }
+
+            if (showBobs) {
+            /* ── Joint (first bob) — size reflects m1 ── */
+            const s1 = Math.sqrt(m1);
+            ctx.fillStyle = 'rgba(210,205,195,0.12)';
+            ctx.beginPath(); ctx.arc(jsx, jsy, armR * 2.2 * s1, 0, TAU); ctx.fill();
+
+            ctx.fillStyle = 'rgba(210,205,195,0.7)';
+            ctx.beginPath(); ctx.arc(jsx, jsy, armR * 0.55 * s1, 0, TAU); ctx.fill();
+
+            ctx.fillStyle = 'rgba(235,230,220,0.95)';
+            ctx.beginPath(); ctx.arc(jsx, jsy, armR * 0.25 * s1, 0, TAU); ctx.fill();
+
+            bctx.fillStyle = 'rgba(210,205,195,0.4)';
+            bctx.beginPath(); bctx.arc(jsx, jsy, armR * 1.6 * s1, 0, TAU); bctx.fill();
+
+            /* ── Tip (second bob) — size reflects m2 ── */
+            const s2 = Math.sqrt(m2);
+            ctx.fillStyle = `hsla(${hue},80%,55%,0.12)`;
+            ctx.beginPath(); ctx.arc(tsx, tsy, armR * 2.0 * s2, 0, TAU); ctx.fill();
+
+            ctx.fillStyle = `hsla(${hue},90%,58%,0.8)`;
+            ctx.beginPath(); ctx.arc(tsx, tsy, armR * 0.5 * s2, 0, TAU); ctx.fill();
+
+            ctx.fillStyle = `hsla(${hue},70%,85%,0.95)`;
+            ctx.beginPath(); ctx.arc(tsx, tsy, armR * 0.22 * s2, 0, TAU); ctx.fill();
+
+            bctx.fillStyle = `hsla(${hue},85%,62%,0.5)`;
+            bctx.beginPath(); bctx.arc(tsx, tsy, armR * 1.4 * s2, 0, TAU); bctx.fill();
+            }
+        }
+
+        /* ── Screen → physics (inverse of toScreen) ── */
+        function fromScreen(sx, sy) {
+            const w = window.innerWidth, h = window.innerHeight;
+            const scale = Math.min(w, h) / (2 * maxR);
+            return [(sx - w * 0.5) / scale, (sy - h * 0.5) / scale];
+        }
+
+        /* ── Inverse kinematics: place tip at (tx,ty), solve for θ₁,θ₂ ── */
+        function solveIK(tx, ty) {
+            const d = Math.sqrt(tx * tx + ty * ty);
+            const reach = l1 + l2;
+            const inner = Math.abs(l1 - l2);
+
+            /* Clamp to reachable range */
+            let cx = tx, cy = ty;
+            if (d > reach - 0.001 || d < inner + 0.001) {
+                const clamped = Math.max(inner + 0.001, Math.min(reach - 0.001, d));
+                cx = tx * clamped / (d || 1);
+                cy = ty * clamped / (d || 1);
+            }
+            const cd = Math.sqrt(cx * cx + cy * cy);
+
+            /* Angle from pivot to target (in our coord system: x=sin, y=cos) */
+            const phi = Math.atan2(cx, cy);
+
+            /* Law of cosines: angle at pivot */
+            const cosB = (l1 * l1 + cd * cd - l2 * l2) / (2 * l1 * cd);
+            const beta = Math.acos(Math.max(-1, Math.min(1, cosB)));
+
+            const t1 = phi + beta;
+
+            /* θ₂ from joint-to-target vector */
+            const jx = l1 * Math.sin(t1);
+            const jy = l1 * Math.cos(t1);
+            const t2 = Math.atan2(cx - jx, cy - jy);
+
+            return [t1, t2];
+        }
+
+        /* ── Drag interaction ── */
+        let dragging = false;
+
+        function startDrag(sx, sy) {
+            paused = true;
+            dragging = true;
+            moveDrag(sx, sy);
+        }
+
+        function moveDrag(sx, sy) {
+            if (!dragging) return;
+            const [px, py] = fromScreen(sx, sy);
+            const [t1, t2] = solveIK(px, py);
+            state = [t1, 0, t2, 0];
+
+            /* Update grid position for rendering */
+            const [x, y] = tipXY(state);
+            const [c, r] = toGrid(x, y);
+            curC = c; curR = r;
+            const [jx, jy] = jointXY(state);
+            [jointC, jointR] = toGrid(jx, jy);
+
+            render();
+        }
+
+        function endDrag() {
+            if (!dragging) return;
+            dragging = false;
+            paused = false;
+        }
+
+        mainC.addEventListener('mousedown', e => {
+            if (e.target.closest('#ctrl')) return;
+            startDrag(e.clientX, e.clientY);
+        });
+        window.addEventListener('mousemove', e => moveDrag(e.clientX, e.clientY));
+        window.addEventListener('mouseup', endDrag);
+
+        mainC.addEventListener('touchstart', e => {
+            e.preventDefault();
+            startDrag(e.touches[0].clientX, e.touches[0].clientY);
+        }, { passive: false });
+        window.addEventListener('touchmove', e => {
+            if (dragging) moveDrag(e.touches[0].clientX, e.touches[0].clientY);
+        });
+        window.addEventListener('touchend', endDrag);
+
+        /* ── Evolve: randomly nudge one control on a timer ── */
+        let evolveInterval = 0;
+        let evolveTimer = null;
+
+        /* Sliders that evolve can mutate (not speed or evolve itself) */
+        const evolvable = [
+            { el: elRatio, min: 10, max: 90 },
+            { el: elM1,    min: 10, max: 300 },
+            { el: elM2,    min: 10, max: 300 },
+            { el: elTrail, min: 0, max: 100 },
+            { el: elHue,   min: 5,  max: 200 }
+        ];
+
+        function mutateRandom() {
+            const target = evolvable[Math.floor(Math.random() * evolvable.length)];
+            const cur = parseInt(target.el.value, 10);
+            const range = target.max - target.min;
+            /* Nudge by 5–25% of range in either direction */
+            const nudge = (Math.random() * 0.2 + 0.05) * range * (Math.random() < 0.5 ? -1 : 1);
+            const next = Math.max(target.min, Math.min(target.max, Math.round(cur + nudge)));
+            target.el.value = next;
+        }
+
+        function resetEvolveTimer() {
+            if (evolveTimer) clearInterval(evolveTimer);
+            evolveTimer = null;
+            evolveInterval = parseInt(elEvolve.value, 10);
+            if (evolveInterval > 0) {
+                evolveTimer = setInterval(mutateRandom, evolveInterval * 1000);
+            }
+            vEvolve.textContent = evolveInterval === 0 ? 'off' : evolveInterval + 's';
+        }
+
+        elEvolve.addEventListener('input', resetEvolveTimer);
+        resetEvolveTimer();
+
+        /* ── Random button ── */
+        function randInt(lo, hi) { return lo + Math.floor(Math.random() * (hi - lo + 1)); }
+
+        document.getElementById('spdUp').addEventListener('click', () => {
+            elSpeed.value = Math.min(80, parseInt(elSpeed.value, 10) + 1);
+        });
+        document.getElementById('spdDown').addEventListener('click', () => {
+            elSpeed.value = Math.max(1, parseInt(elSpeed.value, 10) - 1);
+        });
+        document.getElementById('btnRand').addEventListener('click', () => {
+            elRatio.value  = randInt(10, 90);
+            elM1.value     = randInt(10, 300);
+            elM2.value     = randInt(10, 300);
+            elHue.value    = randInt(5, 200);
+            /* Re-launch from a random angle */
+            state = [
+                Math.PI * (0.3 + Math.random() * 0.7) * (Math.random() < 0.5 ? -1 : 1),
+                0,
+                Math.PI * (0.3 + Math.random() * 0.7) * (Math.random() < 0.5 ? -1 : 1),
+                0
+            ];
+        });
+
+        /* ── Share button ── */
+        document.getElementById('btnShare').addEventListener('click', () => {
+            const p = new URLSearchParams();
+            p.set('spd',    elSpeed.value);
+            p.set('legs',   elRatio.value);
+            p.set('m1',     elM1.value);
+            p.set('m2',     elM2.value);
+            p.set('trail',  elTrail.value);
+            p.set('hue',    elHue.value);
+            p.set('drag',   elDrag.value);
+            p.set('res',    elRes.value);
+            p.set('evolve', elEvolve.value);
+            p.set('t1',     state[0].toFixed(4));
+            p.set('t2',     state[2].toFixed(4));
+            const url = window.location.origin + window.location.pathname + '?' + p.toString();
+            navigator.clipboard.writeText(url).then(() => {
+                const btn = document.getElementById('btnShare');
+                btn.textContent = 'copied!';
+                setTimeout(() => { btn.textContent = 'share'; }, 1500);
+            });
+        });
+
+        /* ── Loop ── */
+        function loop() {
+            if (!paused) {
+                update();
+                render();
+            }
+            requestAnimationFrame(loop);
+        }
+        requestAnimationFrame(loop);
+    })();
+    </script>
+</body>
+</html>
