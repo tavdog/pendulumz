@@ -308,9 +308,9 @@
         <div class="ctrl-row"><label>size</label><input type="range" id="sRes" min="0" max="5" value="3"><span class="val" id="vRes">64x32</span></div>
         <div class="ctrl-row"><label>evolve</label><input type="range" id="sEvolve" min="0" max="60" value="0"><span class="val" id="vEvolve">off</span></div>
         <div class="chk-row"><label><input type="checkbox" id="chkLegs" checked>legs</label><label><input type="checkbox" id="chkBobs" checked>bobs</label></div>
-        <div class="ctrl-row"><label>sound</label><select id="selSound"><option value="0">off</option><option value="1">chord</option><option value="2">interval</option><option value="3">psychosis</option></select></div>
+        <div class="ctrl-row"><label>sound</label><select id="selSound"><option value="0">off</option><option value="1">chord</option><option value="2">interval</option><option value="3">psychosis</option><option value="4">wander</option><option value="5">arpeggio</option></select></div>
         <div class="ctrl-row"><label>scale</label><select id="selScale"><option value="0">pentatonic</option><option value="1">major</option><option value="2">minor</option><option value="3">blues</option><option value="4">dorian</option><option value="5">whole tone</option><option value="6">chromatic</option></select></div>
-        <div class="btn-row"><button id="btnRand">random</button><button id="btnShare">share</button></div>
+        <div class="btn-row"><button id="btnRand">random</button><button id="btnShare">share</button><button id="btnClear">clear</button></div>
     </div>
     <script>
     (() => {
@@ -478,6 +478,8 @@
         let simTime = 0;
         let hue = 0;
         let paused = false;
+        let accumAngle1 = 0, accumAngle2 = 0; /* cumulative rotation for wander mode */
+        let arpAccum = 0; /* arpeggio step accumulator */
 
         /* ── Grid: each cell stores trail hue + alpha ── */
         let grid = [];
@@ -660,6 +662,10 @@
                 if (damp < 1) { state[1] *= damp; state[3] *= damp; }
                 simTime += PHYS_DT;
                 hue = (hue + hueSpeed * PHYS_DT) % 360;
+                accumAngle1 += state[1] * PHYS_DT;
+                accumAngle2 += state[3] * PHYS_DT;
+                /* Arpeggio rate: base 4 steps/sec + up to 12 more from top bob speed */
+                arpAccum += (4 + Math.abs(state[1]) * 1.5) * PHYS_DT;
 
                 const [x, y] = tipXY(state);
 
@@ -757,6 +763,53 @@
                         gainChord[i].gain.setTargetAtTime(0.25, audioCtx.currentTime, 0.03);
                     }
                     oscMel.frequency.setTargetAtTime(baseFreq + offsets[3] * spread, audioCtx.currentTime, 0.03);
+
+                } else if (soundMode === 4) {
+                    /* Mode 4 — Wander: cumulative rotation walks through scale */
+                    const sLen = scale.length;
+
+                    /* Top bob accumulated rotation → chord root */
+                    const chordIdx = ((Math.round(accumAngle1 / 0.8) % sLen) + sLen) % sLen;
+
+                    /* Speed of top bob → chord voicing spread */
+                    const spd1 = Math.abs(state[1]);
+                    const voicings = [[0, 0, 1], [0, 1, 3], [0, 2, 4], [0, 3, 6], [0, 4, 8]];
+                    const vi = Math.min(Math.floor(spd1 / 2), voicings.length - 1);
+                    for (let i = 0; i < 3; i++) {
+                        const idx = (chordIdx + voicings[vi][i]) % sLen;
+                        oscChord[i].frequency.setTargetAtTime(midiToFreq(scale[idx]), audioCtx.currentTime, 0.04);
+                        gainChord[i].gain.setTargetAtTime([0.25, 0.18, 0.13][i], audioCtx.currentTime, 0.03);
+                    }
+
+                    /* Bottom bob accumulated rotation → melody */
+                    const melIdx = ((Math.round(accumAngle2 / 0.6) % sLen) + sLen) % sLen;
+                    oscMel.frequency.setTargetAtTime(midiToFreq(scale[melIdx]), audioCtx.currentTime, 0.04);
+
+                } else if (soundMode === 5) {
+                    /* Mode 5 — Arpeggio: cycle through chord tones one at a time */
+                    const sLen = scale.length;
+                    const chordRoot = heightToIdx(jointY, maxY, sLen);
+                    const melNote = heightToIdx(tipY, maxY, sLen);
+
+                    /* Build arpeggio pattern: root, +2, +4, melody, +4, +2 (bounce) */
+                    const arpPattern = [
+                        Math.min(chordRoot, sLen - 1),
+                        Math.min(chordRoot + 2, sLen - 1),
+                        Math.min(chordRoot + 4, sLen - 1),
+                        melNote,
+                        Math.min(chordRoot + 4, sLen - 1),
+                        Math.min(chordRoot + 2, sLen - 1)
+                    ];
+                    const step = Math.floor(arpAccum) % arpPattern.length;
+                    const arpFreq = midiToFreq(scale[arpPattern[step]]);
+
+                    /* Play current note on melody osc, with slight detune on one chord osc */
+                    oscMel.frequency.setTargetAtTime(arpFreq, audioCtx.currentTime, 0.01);
+                    gainMel.gain.setTargetAtTime(0.5, audioCtx.currentTime, 0.02);
+                    oscChord[0].frequency.setTargetAtTime(arpFreq * 1.003, audioCtx.currentTime, 0.01);
+                    gainChord[0].gain.setTargetAtTime(0.15, audioCtx.currentTime, 0.02);
+                    gainChord[1].gain.setTargetAtTime(0, audioCtx.currentTime, 0.02);
+                    gainChord[2].gain.setTargetAtTime(0, audioCtx.currentTime, 0.02);
                 }
 
                 /* Lowpass cutoff sweeps with hue */
@@ -1132,6 +1185,11 @@
                 btn.textContent = 'copied!';
                 setTimeout(() => { btn.textContent = 'share'; }, 1500);
             });
+        });
+
+        document.getElementById('btnClear').addEventListener('click', () => {
+            rebuildGrid();
+            trail = [];
         });
 
         /* ── Loop ── */
