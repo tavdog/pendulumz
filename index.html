@@ -84,6 +84,10 @@
             transition: opacity 0.3s;
         }
         #ctrlToggle:hover { opacity: 0.9; }
+        body.theater #ctrl,
+        body.theater #ctrlToggle,
+        body.theater #logo,
+        body.theater #credit { display: none !important; }
         .ctrl-row {
             display: flex;
             align-items: center;
@@ -331,9 +335,10 @@
         <div class="ctrl-row"><label>size</label><input type="range" id="sRes" min="0" max="5" value="3"><span class="val" id="vRes">64x32</span></div>
         <div class="ctrl-row"><label>evolve</label><input type="range" id="sEvolve" min="0" max="60" value="0"><span class="val" id="vEvolve">off</span></div>
         <div class="chk-row"><label><input type="checkbox" id="chkLegs" checked>legs</label><label><input type="checkbox" id="chkBobs" checked>bobs</label></div>
+        <div class="ctrl-row"><label>color</label><select id="selColor"><option value="0">vivid</option><option value="1">neon</option><option value="2">fire</option><option value="3">ocean</option><option value="4">acid</option><option value="5">pastel</option></select></div>
         <div class="ctrl-row"><label>sound</label><select id="selSound"><option value="0">off</option><option value="1">chord</option><option value="2">interval</option><option value="3">psychosis</option><option value="4">wander</option><option value="5">arpeggio</option></select></div>
         <div class="ctrl-row"><label>scale</label><select id="selScale"><option value="0">pentatonic</option><option value="1">major</option><option value="2">minor</option><option value="3">blues</option><option value="4">dorian</option><option value="5">whole tone</option><option value="6">chromatic</option></select></div>
-        <div class="btn-row"><button id="btnRand">random</button><button id="btnShare">share</button><button id="btnClear">clear</button></div>
+        <div class="btn-row"><button id="btnRand">random</button><button id="btnShare">share</button><button id="btnClear">clear</button><button id="btnTheater">theater</button></div>
     </div>
     <script>
     (() => {
@@ -394,6 +399,35 @@
         ];
         const elScale = document.getElementById('selScale');
         let scaleIdx = 0;
+
+        /* ── Color palettes ── */
+        const elColor = document.getElementById('selColor');
+        let colorMode = 0;
+
+        /*  Returns [h, s, l] transformed by current palette.
+            Input h is the raw cycling hue (0–360). */
+        function palette(h, s, l) {
+            switch (colorMode) {
+                case 0: /* vivid — full spectrum, high saturation, deeper */
+                    return [h, Math.min(s + 8, 100), l * 0.88];
+                case 1: /* neon — full spectrum, max saturation, high contrast */
+                    return [h, 100, Math.max(l * 0.75, 42)];
+                case 2: /* fire — reds/oranges/yellows only */
+                    return [(h % 90) - 10, Math.min(s + 10, 100), l * 0.85];
+                case 3: /* ocean — blues/cyans/teals */
+                    return [180 + (h % 80) - 20, Math.min(s + 5, 100), l * 0.9];
+                case 4: /* acid — greens/yellows, high saturation */
+                    return [60 + (h % 100), 100, Math.max(l * 0.78, 45)];
+                case 5: /* pastel — original softer feel */
+                    return [h, s * 0.7, l * 1.1];
+                default: return [h, s, l];
+            }
+        }
+
+        function pHSLA(h, s, l, a) {
+            const [ph, ps, pl] = palette(h, s, l);
+            return `hsla(${ph.toFixed(0)},${ps.toFixed(0)}%,${pl.toFixed(0)}%,${typeof a === 'number' ? a.toFixed(3) : a})`;
+        }
 
         function midiToFreq(midi) { return 440 * Math.pow(2, (midi - 69) / 12); }
 
@@ -481,7 +515,7 @@
         const paramMap = [
             ['spd', elSpeed], ['legs', elRatio], ['m1', elM1], ['m2', elM2],
             ['trail', elTrail], ['hue', elHue], ['drag', elDrag],
-            ['res', elRes], ['evolve', elEvolve], ['snd', elSound], ['scl', elScale]
+            ['res', elRes], ['evolve', elEvolve], ['snd', elSound], ['scl', elScale], ['clr', elColor]
         ];
         paramMap.forEach(([key, el]) => {
             const v = params.get(key);
@@ -676,6 +710,7 @@
             vHue.textContent   = hueSpeed.toFixed(1);
             vDrag.textContent  = drag > 0 ? (drag * 100).toFixed(2) + '%' : '0';
             vRes.textContent   = lineMode ? 'line' : COLS + 'x' + ROWS;
+            colorMode = parseInt(elColor.value, 10);
 
             let pc = curC, pr = curR;
 
@@ -948,11 +983,11 @@
                     const a = p1.a;
                     const lw = 1.5 + a * 2.5;
 
-                    ctx.strokeStyle = `hsla(${p1.h},92%,${54 + a * 16}%,${(a * 0.9).toFixed(3)})`;
+                    ctx.strokeStyle = pHSLA(p1.h, 92, 54 + a * 16, a * 0.9);
                     ctx.lineWidth = lw;
                     ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
 
-                    bctx.strokeStyle = `hsla(${p1.h},95%,62%,${(a * 0.7).toFixed(3)})`;
+                    bctx.strokeStyle = pHSLA(p1.h, 95, 62, a * 0.7);
                     bctx.lineWidth = lw + 2;
                     bctx.beginPath(); bctx.moveTo(x0, y0); bctx.lineTo(x1, y1); bctx.stroke();
                 }
@@ -974,32 +1009,32 @@
 
                             /* Glow halo */
                             const gr = dotR * (1.1 + a * 0.9);
-                            ctx.fillStyle  = `hsla(${ch},90%,52%,${(a * 0.22).toFixed(3)})`;
+                            ctx.fillStyle  = pHSLA(ch, 90, 52, a * 0.22);
                             ctx.beginPath(); ctx.arc(cx, cy, gr, 0, TAU); ctx.fill();
 
                             /* Bloom halo */
-                            bctx.fillStyle = `hsla(${ch},95%,58%,${(a * 0.65).toFixed(3)})`;
+                            bctx.fillStyle = pHSLA(ch, 95, 58, a * 0.65);
                             bctx.beginPath(); bctx.arc(cx, cy, gr * 1.1, 0, TAU); bctx.fill();
 
                             /* Core dot */
                             const coreR = dotR * (0.45 + a * 0.55);
                             const light = 54 + a * 16;
-                            ctx.fillStyle  = `hsla(${ch},93%,${light.toFixed(0)}%,${(a * 0.88).toFixed(3)})`;
+                            ctx.fillStyle  = pHSLA(ch, 93, light, a * 0.88);
                             ctx.beginPath(); ctx.arc(cx, cy, coreR, 0, TAU); ctx.fill();
 
                             /* Bloom core */
-                            bctx.fillStyle = `hsla(${ch},95%,64%,${(a * 0.8).toFixed(3)})`;
+                            bctx.fillStyle = pHSLA(ch, 95, 64, a * 0.8);
                             bctx.beginPath(); bctx.arc(cx, cy, coreR, 0, TAU); bctx.fill();
 
                             /* Live position extras */
                             if (isCur) {
-                                ctx.fillStyle = `hsla(${ch},50%,92%,0.85)`;
+                                ctx.fillStyle = pHSLA(ch, 50, 92, 0.85);
                                 ctx.beginPath(); ctx.arc(cx, cy, dotR * 0.28, 0, TAU); ctx.fill();
 
-                                ctx.fillStyle = `hsla(${ch},80%,58%,0.1)`;
+                                ctx.fillStyle = pHSLA(ch, 80, 58, 0.1);
                                 ctx.beginPath(); ctx.arc(cx, cy, dotR * 3.2, 0, TAU); ctx.fill();
 
-                                bctx.fillStyle = `hsla(${ch},75%,72%,0.55)`;
+                                bctx.fillStyle = pHSLA(ch, 75, 72, 0.55);
                                 bctx.beginPath(); bctx.arc(cx, cy, dotR * 2.6, 0, TAU); bctx.fill();
                             }
                         } else {
@@ -1029,16 +1064,16 @@
 
             /* ── Tip (second bob) — size reflects m2 ── */
             const s2 = Math.sqrt(m2);
-            ctx.fillStyle = `hsla(${hue},80%,55%,0.12)`;
+            ctx.fillStyle = pHSLA(hue, 80, 55, 0.12);
             ctx.beginPath(); ctx.arc(tsx, tsy, armR * 2.0 * s2, 0, TAU); ctx.fill();
 
-            ctx.fillStyle = `hsla(${hue},90%,58%,0.8)`;
+            ctx.fillStyle = pHSLA(hue, 90, 58, 0.8);
             ctx.beginPath(); ctx.arc(tsx, tsy, armR * 0.5 * s2, 0, TAU); ctx.fill();
 
-            ctx.fillStyle = `hsla(${hue},70%,85%,0.95)`;
+            ctx.fillStyle = pHSLA(hue, 70, 85, 0.95);
             ctx.beginPath(); ctx.arc(tsx, tsy, armR * 0.22 * s2, 0, TAU); ctx.fill();
 
-            bctx.fillStyle = `hsla(${hue},85%,62%,0.5)`;
+            bctx.fillStyle = pHSLA(hue, 85, 62, 0.5);
             bctx.beginPath(); bctx.arc(tsx, tsy, armR * 1.4 * s2, 0, TAU); bctx.fill();
             }
         }
@@ -1202,6 +1237,7 @@
             p.set('evolve', elEvolve.value);
             p.set('snd',    elSound.value);
             p.set('scl',    elScale.value);
+            p.set('clr',    elColor.value);
             p.set('t1',     state[0].toFixed(4));
             p.set('w1',     state[1].toFixed(4));
             p.set('t2',     state[2].toFixed(4));
@@ -1222,6 +1258,23 @@
         document.getElementById('ctrlToggle').addEventListener('click', () => {
             document.getElementById('ctrl').classList.toggle('hidden');
         });
+
+        /* ── Theater mode ── */
+        document.getElementById('btnTheater').addEventListener('click', () => {
+            document.body.classList.add('theater');
+        });
+        mainC.addEventListener('mousedown', e => {
+            if (document.body.classList.contains('theater')) {
+                document.body.classList.remove('theater');
+                e.stopImmediatePropagation();
+            }
+        }, true);
+        mainC.addEventListener('touchstart', e => {
+            if (document.body.classList.contains('theater')) {
+                document.body.classList.remove('theater');
+                e.stopImmediatePropagation();
+            }
+        }, true);
 
         /* ── Mute on blur, unmute on focus ── */
         window.addEventListener('blur', () => {
